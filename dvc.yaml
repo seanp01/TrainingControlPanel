@@ -1,0 +1,50 @@
+"""
+DVC pipeline configuration for automated training workflows.
+"""
+
+stages:
+  prepare_data:
+    cmd: python -m src.data.prepare_data
+    deps:
+    - src/data/prepare_data.py
+    - config/config.yaml
+    params:
+    - data_preparation
+    outs:
+    - data/processed/training_data.parquet
+    - data/processed/validation_data.parquet
+
+  train_model:
+    cmd: python -m src.models.train_model
+    deps:
+    - src/models/train_model.py
+    - data/processed/training_data.parquet
+    - data/processed/validation_data.parquet
+    params:
+    - model_training
+    outs:
+    - models/current/model.pkl
+    - models/current/config.json
+    metrics:
+    - models/current/metrics.json
+
+  evaluate_model:
+    cmd: python -m src.models.evaluate_model
+    deps:
+    - src/models/evaluate_model.py
+    - models/current/model.pkl
+    - data/processed/validation_data.parquet
+    metrics:
+    - evaluation/metrics.json
+    plots:
+    - evaluation/confusion_matrix.json
+    - evaluation/roc_curve.json
+
+  deploy_model:
+    cmd: python -m src.models.deploy_model
+    deps:
+    - src/models/deploy_model.py
+    - models/current/model.pkl
+    - evaluation/metrics.json
+    outs:
+    - deployment/model_service.yaml
